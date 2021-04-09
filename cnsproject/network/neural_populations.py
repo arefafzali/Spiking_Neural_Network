@@ -7,7 +7,9 @@ from abc import abstractmethod
 from operator import mul
 from typing import Union, Iterable
 
+import numpy as np
 import torch
+import copy
 
 
 class NeuralPopulation(torch.nn.Module):
@@ -17,7 +19,46 @@ class NeuralPopulation(torch.nn.Module):
     Make sure to implement the abstract methods in your child class. Note that this template\
     will give you homogeneous neural populations in terms of excitations and inhibitions. You\
     can modify this by removing `is_inhibitory` and adding another attribute which defines the\
-    percentage of inhibitory/excitatory neurons.
+    percentage of inhibitory/excitatory neurons or use a boolean tensor with the same shape as\
+    the population, defining which neurons are inhibitory.
+
+    The most important attribute of each neural population is its `shape` which indicates the\
+    number and/or architecture of the neurons in it. When there are connected populations, each\
+    pre-synaptic population will have an impact on the post-synaptic one in case of spike. This\
+    spike might be persistent for some duration of time and with some decaying magnitude. To\
+    handle this coincidence, four attributes are defined:
+    - `spike_trace` is a boolean indicating whether to record the spike trace in each time step.
+    - `additive_spike_trace` would indicate whether to save the accumulated traces up to the\
+        current time step.
+    - `tau_s` will show the duration by which the spike trace persists by a decaying manner.
+    - `trace_scale` is responsible for the scale of each spike at the following time steps.\
+        Its value is only considered if `additive_spike_trace` is set to `True`.
+
+    Make sure to call `reset_state_variables` before starting the simulation to allocate\
+    and/or reset the state variables such as `s` (spikes tensor) and `traces` (trace of spikes).\
+    Also do not forget to set the time resolution (dt) for the simulation.
+
+    Each simulation step is defined in `forward` method. You can use the utility methods (i.e.\
+    `compute_potential`, `compute_spike`, `refractory_and_reset`, and `compute_decay`) to break\
+    the differential equations into smaller code blocks and call them within `forward`. Make\
+    sure to call methods `forward` and `compute_decay` of `NeuralPopulation` in child class\
+    methods; As it provides the computation of spike traces (not necessary if you are not\
+    considering the traces). The `forward` method can either work with current or spike trace.\
+    You can easily work with any of them you wish. When there are connected populations, you\
+    might need to consider how to convert the pre-synaptic spikes into current or how to\
+    change the `forward` block to support spike traces as input.
+
+    There are some more points to be considered further:
+    - Note that parameters of the neuron are not specified in child classes. You have to\
+        define them as attributes of the corresponding class (i.e. in __init__) with suitable\
+        naming.
+    - In case you want to make simulations on `cuda`, make sure to transfer the tensors\
+        to the desired device by defining a `device` attribute or handling the issue from\
+        upstream code.
+    - Almost all variables, parameters, and arguments in this file are tensors with a\
+        single value or tensors of the shape equal to population`s shape. No extra\
+        dimension for time is needed. The time dimension should be handled in upstream\
+        code and/or monitor objects.
 
     Arguments
     ---------
@@ -51,12 +92,15 @@ class NeuralPopulation(torch.nn.Module):
     ) -> None:
         super().__init__()
 
+
         self.shape = shape
         self.n = reduce(mul, self.shape)
         self.spike_trace = spike_trace
         self.additive_spike_trace = additive_spike_trace
 
         if self.spike_trace:
+            # You can use `torch.Tensor()` instead of `torch.zeros(*shape)` if `reset_state_variables`
+            # is intended to be called before every simulation.
             self.register_buffer("traces", torch.zeros(*self.shape))
             self.register_buffer("tau_s", torch.tensor(tau_s))
 
@@ -68,6 +112,8 @@ class NeuralPopulation(torch.nn.Module):
         self.is_inhibitory = is_inhibitory
         self.learning = learning
 
+        # You can use `torch.Tensor()` instead of `torch.zeros(*shape, dtype=torch.bool)` if \
+        # `reset_state_variables` is intended to be called before every simulation.
         self.register_buffer("s", torch.zeros(*self.shape, dtype=torch.bool))
         self.dt = None
 
@@ -267,6 +313,9 @@ class LIFPopulation(NeuralPopulation):
         trace_scale: Union[float, torch.Tensor] = 1.,
         is_inhibitory: bool = False,
         learning: bool = True,
+        R: float = np.inf,
+        C: float = 0,
+        threshold: int = -55,
         **kwargs
     ) -> None:
         super().__init__(
@@ -279,44 +328,40 @@ class LIFPopulation(NeuralPopulation):
             learning=learning,
         )
 
-        """
-        TODO.
+        self.u_rest = -70
+        self.u = torch.ones(self.n) * self.u_rest
+        self.threshold = threshold
+        self.R = R
+        self.tau = R * C
+        self.s = torch.Tensor()
 
-        1. Add the required parameters.
-        2. Fill the body accordingly.
-        """
 
-    def forward(self, traces: torch.Tensor) -> None:
+    def forward(self, traces: torch.tensor) -> None:
         """
-        TODO.
+        This is the main method responsible for one step of neuron simulation.
+        """
+        self.compute_potential(traces)
+        self.compute_spike()
+        return
 
-        1. Make use of other methods to fill the body. This is the main method\
-           responsible for one step of neuron simulation.
-        2. You might need to call the method from parent class.
+    def compute_potential(self, traces: torch.tensor) -> None:
         """
-        pass
-
-    def compute_potential(self) -> None:
+        This method implements the neural dynamics for computing the potential of LIF\
+        neurons.
         """
-        TODO.
-
-        Implement the neural dynamics for computing the potential of LIF\
-        neurons. The method can either make changes to attributes directly or\
-        return the result for further use.
-        """
-        pass
+        self.u -= (self.dt / self.tau)*(self.u - self.u_rest - self.R * traces)
+        return
 
     def compute_spike(self) -> None:
         """
-        TODO.
-
-        Implement the spike condition. The method can either make changes to\
-        attributes directly or return the result for further use.
+        This method implements the spike condition.
         """
-        pass
+        self.s = self.u >= torch.tensor(self.threshold)
+        self.u = ((~self.s)*(self.u-self.u_rest))+self.u_rest
+        return
 
     @abstractmethod
-    def refractory_and_reset(self) -> None:
+    def refractory_and_reset(self, neuron_idx: int) -> None:
         """
         TODO.
 
@@ -324,7 +369,8 @@ class LIFPopulation(NeuralPopulation):
         make changes to attributes directly or return the computed value for\
         further use.
         """
-        pass
+        self.u[neuron_idx] = self.u_rest
+        return
 
     @abstractmethod
     def compute_decay(self) -> None:
