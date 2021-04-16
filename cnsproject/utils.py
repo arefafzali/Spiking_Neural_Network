@@ -29,3 +29,7 @@ def random_step_function(time: int, step_size: int, scale: int):
         I[i:i+20, 0] = np.random.randint(step_size)
     I = torch.from_numpy(I)
     return I
+
+def random2_step_function(time: int, step_size: int, scale: int):
+    I = torch.rand(time,1)*step_size
+    return I

@@ -10,6 +10,7 @@ from typing import Union, Iterable
 import numpy as np
 import torch
 import copy
+import math
 
 
 class NeuralPopulation(torch.nn.Module):
@@ -402,6 +403,11 @@ class ELIFPopulation(NeuralPopulation):
         trace_scale: Union[float, torch.Tensor] = 1.,
         is_inhibitory: bool = False,
         learning: bool = True,
+        R: float = np.inf,
+        C: float = 0,
+        delta_t: int = 10,
+        threshold_rh: int = -55,
+        threshold_r: int = -55,
         **kwargs
     ) -> None:
         super().__init__(
@@ -420,6 +426,14 @@ class ELIFPopulation(NeuralPopulation):
         1. Add the required parameters.
         2. Fill the body accordingly.
         """
+        self.u_rest = -70
+        self.u = torch.ones(self.n) * self.u_rest
+        self.threshold_r = threshold_r
+        self.threshold_rh = threshold_rh
+        self.R = R
+        self.tau = R * C
+        self.s = torch.Tensor()
+        self.delta_t = delta_t
 
     def forward(self, traces: torch.Tensor) -> None:
         """
@@ -429,9 +443,11 @@ class ELIFPopulation(NeuralPopulation):
            responsible for one step of neuron simulation.
         2. You might need to call the method from parent class.
         """
-        pass
+        self.compute_potential(traces)
+        self.compute_spike()
+        return
 
-    def compute_potential(self) -> None:
+    def compute_potential(self, traces: torch.tensor) -> None:
         """
         TODO.
 
@@ -439,7 +455,8 @@ class ELIFPopulation(NeuralPopulation):
         neurons. The method can either make changes to attributes directly or\
         return the result for further use.
         """
-        pass
+        self.u -= (self.dt / self.tau)*(self.u - self.u_rest - self.delta_t * np.exp((self.u - self.threshold_rh) / self.delta_t) - self.R * traces)
+        return
 
     def compute_spike(self) -> None:
         """
@@ -448,7 +465,10 @@ class ELIFPopulation(NeuralPopulation):
         Implement the spike condition. The method can either make changes to
         attributes directly or return the result for further use.
         """
-        pass
+        self.s = self.u >= torch.tensor(self.threshold_r)
+        self.u = ((~self.s)*(self.u-self.u_rest))+self.u_rest
+        return
+
 
     @abstractmethod
     def refractory_and_reset(self) -> None:
@@ -492,6 +512,14 @@ class AELIFPopulation(NeuralPopulation):
         trace_scale: Union[float, torch.Tensor] = 1.,
         is_inhibitory: bool = False,
         learning: bool = True,
+        R: float = np.inf,
+        C: float = 0,
+        delta_t: float = 10.,
+        tau_w: float = 1.,
+        a: float = 1.,
+        b: float = 1.,
+        threshold_rh: int = -55,
+        threshold_r: int = -55,
         **kwargs
     ) -> None:
         super().__init__(
@@ -510,6 +538,19 @@ class AELIFPopulation(NeuralPopulation):
         1. Add the required parameters.
         2. Fill the body accordingly.
         """
+        self.u_rest = -70
+        self.u = torch.ones(self.n) * self.u_rest
+        self.threshold_r = threshold_r
+        self.threshold_rh = threshold_rh
+        self.R = R
+        self.tau_m = R * C
+        self.tau_w = tau_w
+        self.s = torch.Tensor()
+        self.delta_t = delta_t
+        self.num_spikes = 0
+        self.W = 0
+        self.a = a
+        self.b = b
 
     def forward(self, traces: torch.Tensor) -> None:
         """
@@ -519,9 +560,11 @@ class AELIFPopulation(NeuralPopulation):
            responsible for one step of neuron simulation.
         2. You might need to call the method from parent class.
         """
-        pass
+        self.compute_potential(traces)
+        self.compute_spike()
+        return
 
-    def compute_potential(self) -> None:
+    def compute_potential(self, traces: torch.Tensor) -> None:
         """
         TODO.
 
@@ -529,7 +572,9 @@ class AELIFPopulation(NeuralPopulation):
         ELIF neurons. The method can either make changes to attributes directly\
         or return the result for further use.
         """
-        pass
+        self.W += (self.dt / self.tau_w)*(self.a * (self.u - self.u_rest) - self.W + self.b * self.tau_w * self.num_spikes)
+        self.u -= (self.dt / self.tau_m)*(self.u - self.u_rest - self.delta_t * np.exp((self.u - self.threshold_rh) / self.delta_t) + self.R * self.W - self.R * traces)
+        return
 
     def compute_spike(self) -> None:
         """
@@ -538,7 +583,10 @@ class AELIFPopulation(NeuralPopulation):
         Implement the spike condition. The method can either make changes to\
         attributes directly or return the result for further use.
         """
-        pass
+        self.s = self.u >= torch.tensor(self.threshold_r)
+        self.num_spikes += self.s
+        self.u = ((~self.s)*(self.u-self.u_rest))+self.u_rest
+        return
 
     @abstractmethod
     def refractory_and_reset(self) -> None:
