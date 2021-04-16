@@ -22,7 +22,6 @@ class plotting():
     def reset(self):
         self.figure = plt.figure(figsize=(10,5))
         self.colors = plt.rcParams["axes.prop_cycle"]()
-        self.counter = 0
 
 
     def show(self):
@@ -51,15 +50,14 @@ class plotting():
         return
 
 
-    def plot_ut_it_update(self, it, ut, threshold, spikes) -> None:
+    def plot_ut_it_update(self, it, ut, threshold, spikes, mode="") -> None:
         c = next(self.colors)["color"]
-        self.ax1.plot(it, label = "I & U "+str(self.counter), color=c)
+        self.ax1.plot(it, label = "I & U " + mode, color=c)
         self.ax2.plot(ut, color=c)
         c = next(self.colors)["color"]
-        self.ax2.hlines(threshold, 0, len(ut), label = "threshold "+str(self.counter), colors = c)
+        self.ax2.hlines(threshold, 0, len(ut), label = "threshold " + mode, colors = c)
         c = next(self.colors)["color"]
-        self.ax2.scatter(spikes, [threshold]*len(spikes), label = "spikes "+str(self.counter), color = c)
-        self.counter += 1
+        self.ax2.scatter(spikes, [threshold]*len(spikes), label = "spikes " + mode, color = c)
         return
 
 
