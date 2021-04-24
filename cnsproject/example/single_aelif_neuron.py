@@ -36,9 +36,11 @@ scale = 100
 plot = plotting()
 
 neuron, I, s, u = single_neuron_time(
-        time = time, dt = 1, scale = scale, step_size = 3, I_function = step_function, shape = (1,), spike_trace = True,
+        time = time, dt = 1, scale = scale, step_size = 3,
+        I_function = step_function, shape = (1,), spike_trace = True,
         additive_spike_trace = True, tau_s = 10., trace_scale = 1.,
-        is_inhibitory = False, learning = False, R = 10, C = 10, delta_t = 10, tau_w = 1, a = 0.001, b = 0.5,
+        is_inhibitory = False, learning = False, R = 10, C = 10,
+        delta_t = 10, tau_w = 1, a = 0.001, b = 0.5,
         threshold_rh = -55, threshold_r = 0
     )
 
@@ -51,9 +53,11 @@ plot.plot_fi_init()
 spikes = []
 for x in range(15):
     _, _, s, _ = single_neuron_time(
-        time = time, dt = 1, scale = scale, step_size = x, I_function = step_function, shape = (1,), spike_trace = True,
+        time = time, dt = 1, scale = scale, step_size = x,
+        I_function = step_function, shape = (1,), spike_trace = True,
         additive_spike_trace = True, tau_s = 10., trace_scale = 1.,
-        is_inhibitory = False, learning = False, R = 10, C = 10, delta_t = 20, tau_w = 1, a = 0.001, b = 0.5,
+        is_inhibitory = False, learning = False, R = 10, C = 10,
+        delta_t = 20, tau_w = 1, a = 0.001, b = 0.5,
         threshold_rh = -55, threshold_r = 0
     )
     spikes.append(s[0].sum())

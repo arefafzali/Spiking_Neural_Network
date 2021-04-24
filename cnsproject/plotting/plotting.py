@@ -15,6 +15,7 @@ also a bonus. The visualizations you will definitely need are as follows:
 """
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 
 
 class plotting():
@@ -76,3 +77,45 @@ class plotting():
         plt.pause(0.005)
         self.figure.canvas.draw()
         return
+
+    
+    def plot_population_activity_init(self, time) -> None:
+        self.reset()
+        self.ax1 = self.figure.add_subplot(311)
+        self.ax1.set_xlabel('number of spikes')
+        self.ax1.set_ylabel('time')
+        self.ax1.set_title("Population Activity")
+        self.ax1.grid(True)
+        self.ax1.set_xticks(np.arange(time+1, dtype=int)*100)
+        self.ax1.set_xticklabels(np.arange(time+1, dtype=int))
+
+        self.ax2 = self.figure.add_subplot(312)
+        self.ax2.set_xlabel('time')
+        self.ax2.set_ylabel('index of neuron')
+        self.ax2.set_title("Raster Plot")
+        self.ax2.grid(True)
+        self.ax2.set_xticks(np.arange(time+1, dtype=int)*100)
+        self.ax2.set_xticklabels(np.arange(time+1, dtype=int))
+
+        self.ax3 = self.figure.add_subplot(313)
+        self.ax3.set_ylabel('I(t)')
+        self.ax3.set_xlabel('time')
+        self.ax3.set_title("Current per second")
+        self.ax3.grid(True)
+        self.ax3.set_xticks(np.arange(time+1, dtype=int)*100)
+        self.ax3.set_xticklabels(np.arange(time+1, dtype=int))
+        self.figure.tight_layout(pad=0.5)
+        return
+
+    def plot_population_activity_update(self, spikes, it, mode="") -> None:
+        c = next(self.colors)["color"]
+        self.ax1.plot(sum(spikes), label="population "+mode, color = c)
+        sf = np.flipud(spikes)
+        args = np.argwhere(sf)
+        self.ax2.scatter(args.T[1,:], args.T[0,:], c = c, s=10)
+        c = next(self.colors)["color"]
+        self.ax3.plot(it, label = "I & U "+mode, color = c)
+        return
+
+    
+

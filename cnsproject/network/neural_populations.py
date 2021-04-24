@@ -343,6 +343,7 @@ class LIFPopulation(NeuralPopulation):
         """
         self.compute_potential(traces)
         self.compute_spike()
+        super().forward(traces)
         return
 
     def compute_potential(self, traces: torch.tensor) -> None:
@@ -364,9 +365,7 @@ class LIFPopulation(NeuralPopulation):
     @abstractmethod
     def refractory_and_reset(self, neuron_idx: int) -> None:
         """
-        TODO.
-
-        Implement the refractory and reset conditions. The method can either\
+        The refractory and reset conditions. The method can either\
         make changes to attributes directly or return the computed value for\
         further use.
         """
@@ -381,7 +380,8 @@ class LIFPopulation(NeuralPopulation):
         Implement the dynamics of decays. You might need to call the method from
         parent class.
         """
-        pass
+        super().compute_decay()
+
 
 
 class ELIFPopulation(NeuralPopulation):
@@ -420,12 +420,6 @@ class ELIFPopulation(NeuralPopulation):
             learning=learning,
         )
 
-        """
-        TODO.
-
-        1. Add the required parameters.
-        2. Fill the body accordingly.
-        """
         self.u_rest = -70
         self.u = torch.ones(self.n) * self.u_rest
         self.threshold_r = threshold_r
@@ -436,35 +430,16 @@ class ELIFPopulation(NeuralPopulation):
         self.delta_t = delta_t
 
     def forward(self, traces: torch.Tensor) -> None:
-        """
-        TODO.
-
-        1. Make use of other methods to fill the body. This is the main method\
-           responsible for one step of neuron simulation.
-        2. You might need to call the method from parent class.
-        """
         self.compute_potential(traces)
         self.compute_spike()
+        super().forward(traces)
         return
 
     def compute_potential(self, traces: torch.tensor) -> None:
-        """
-        TODO.
-
-        Implement the neural dynamics for computing the potential of ELIF\
-        neurons. The method can either make changes to attributes directly or\
-        return the result for further use.
-        """
         self.u -= (self.dt / self.tau)*(self.u - self.u_rest - self.delta_t * np.exp((self.u - self.threshold_rh) / self.delta_t) - self.R * traces)
         return
 
     def compute_spike(self) -> None:
-        """
-        TODO.
-
-        Implement the spike condition. The method can either make changes to
-        attributes directly or return the result for further use.
-        """
         self.s = self.u >= torch.tensor(self.threshold_r)
         self.u = ((~self.s)*(self.u-self.u_rest))+self.u_rest
         return
@@ -472,24 +447,12 @@ class ELIFPopulation(NeuralPopulation):
 
     @abstractmethod
     def refractory_and_reset(self) -> None:
-        """
-        TODO.
-
-        Implement the refractory and reset conditions. The method can either\
-        make changes to attributes directly or return the computed value for\
-        further use.
-        """
         pass
 
     @abstractmethod
     def compute_decay(self) -> None:
-        """
-        TODO.
-
-        Implement the dynamics of decays. You might need to call the method from
-        parent class.
-        """
-        pass
+        super().compute_decay()
+        return
 
 
 class AELIFPopulation(NeuralPopulation):
@@ -532,12 +495,6 @@ class AELIFPopulation(NeuralPopulation):
             learning=learning,
         )
 
-        """
-        TODO.
-
-        1. Add the required parameters.
-        2. Fill the body accordingly.
-        """
         self.u_rest = -70
         self.u = torch.ones(self.n) * self.u_rest
         self.threshold_r = threshold_r
@@ -553,36 +510,17 @@ class AELIFPopulation(NeuralPopulation):
         self.b = b
 
     def forward(self, traces: torch.Tensor) -> None:
-        """
-        TODO.
-
-        1. Make use of other methods to fill the body. This is the main method\
-           responsible for one step of neuron simulation.
-        2. You might need to call the method from parent class.
-        """
         self.compute_potential(traces)
         self.compute_spike()
+        super().forward(traces)
         return
 
     def compute_potential(self, traces: torch.Tensor) -> None:
-        """
-        TODO.
-
-        Implement the neural dynamics for computing the potential of adaptive\
-        ELIF neurons. The method can either make changes to attributes directly\
-        or return the result for further use.
-        """
         self.W += (self.dt / self.tau_w)*(self.a * (self.u - self.u_rest) - self.W + self.b * self.tau_w * self.num_spikes)
         self.u -= (self.dt / self.tau_m)*(self.u - self.u_rest - self.delta_t * np.exp((self.u - self.threshold_rh) / self.delta_t) + self.R * self.W - self.R * traces)
         return
 
     def compute_spike(self) -> None:
-        """
-        TODO.
-
-        Implement the spike condition. The method can either make changes to\
-        attributes directly or return the result for further use.
-        """
         self.s = self.u >= torch.tensor(self.threshold_r)
         self.num_spikes += self.s
         self.u = ((~self.s)*(self.u-self.u_rest))+self.u_rest
@@ -590,21 +528,9 @@ class AELIFPopulation(NeuralPopulation):
 
     @abstractmethod
     def refractory_and_reset(self) -> None:
-        """
-        TODO.
-
-        Implement the refractory and reset conditions. The method can either\
-        make changes to attributes directly or return the computed value for\
-        further use.
-        """
         pass
 
     @abstractmethod
     def compute_decay(self) -> None:
-        """
-        TODO.
-
-        Implement the dynamics of decays. You might need to call the method from
-        parent class.
-        """
-        pass
+        super().compute_decay()
+        return

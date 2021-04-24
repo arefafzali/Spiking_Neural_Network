@@ -8,7 +8,7 @@ from typing import Union, Optional, Sequence
 import numpy as np
 import torch
 
-from ..network.connections import AbstractConnection
+from cnsproject.network.connections import AbstractConnection
 
 
 class LearningRule(ABC):
