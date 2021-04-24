@@ -7,7 +7,8 @@ from typing import Union, Sequence
 
 import torch
 
-from .neural_populations import NeuralPopulation
+from cnsproject.network.neural_populations import NeuralPopulation
+
 
 
 class AbstractConnection(ABC, torch.nn.Module):
@@ -85,8 +86,7 @@ class AbstractConnection(ABC, torch.nn.Module):
 
         self.weight_decay = weight_decay
 
-        from ..learning.learning_rules import NoOp
-
+        from cnsproject.learning.learning_rules import NoOp
         learning_rule = kwargs.get('learning_rule', NoOp)
 
         self.learning_rule = learning_rule(
@@ -170,6 +170,10 @@ class DenseConnection(AbstractConnection):
         post: NeuralPopulation,
         lr: Union[float, Sequence[float]] = None,
         weight_decay: float = 0.0,
+        J: float = 0.0,
+        tau_s: Union[float, torch.Tensor] = 15.,
+        trace_scale: Union[float, torch.Tensor] = 1.,
+        dt: int = 1,
         **kwargs
     ) -> None:
         super().__init__(
@@ -179,21 +183,22 @@ class DenseConnection(AbstractConnection):
             weight_decay=weight_decay,
             **kwargs
         )
-        """
-        TODO.
 
-        1. Add more parameters if needed.
-        2. Fill the body accordingly.
-        """
+        self.connectivity_matrix = torch.ge(torch.rand(*self.pre.shape, *self.post.shape), 0)
+        self.J = J
+        self.w = torch.ones(*self.connectivity_matrix.shape)*self.J/sum(self.pre.shape)
+        self.traces = torch.zeros(*self.connectivity_matrix.shape)
+        self.tau_s = torch.tensor(tau_s)
+        self.trace_scale = torch.tensor(trace_scale)
+        self.dt = torch.tensor(dt)
 
-    def compute(self, s: torch.Tensor) -> None:
-        """
-        TODO.
-
-        Implement the computation of post-synaptic population activity given the
-        activity of the pre-synaptic population.
-        """
-        pass
+    def compute(self) -> torch.tensor:
+        self.pre.compute_decay()
+        self.trace_decay = torch.exp(-self.dt/self.tau_s)
+        self.traces *= self.trace_decay
+        self.traces += self.trace_scale * self.pre.s.float().reshape(*self.pre.shape, *[1 for i in self.post.shape])
+        I = self.w * self.traces * self.connectivity_matrix
+        return I.sum(axis=[i for i in range(len(self.pre.shape))])
 
     def update(self, **kwargs) -> None:
         """
