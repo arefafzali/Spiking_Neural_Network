@@ -187,7 +187,7 @@ class NeuralPopulation(torch.nn.Module):
         None
 
         """
-        self.dt = torch.tensor(self.dt)
+        # self.dt = torch.tensor(self.dt)
 
         if self.spike_trace:
             self.trace_decay = torch.exp(-self.dt/self.tau_s)
@@ -317,6 +317,7 @@ class LIFPopulation(NeuralPopulation):
         R: float = np.inf,
         C: float = 0,
         threshold: int = -55,
+        dt: int = 1,
         **kwargs
     ) -> None:
         super().__init__(
@@ -335,6 +336,7 @@ class LIFPopulation(NeuralPopulation):
         self.R = R
         self.tau = R * C
         self.s = torch.Tensor()
+        self.dt = torch.tensor(dt)
 
 
     def forward(self, traces: torch.tensor) -> None:
@@ -408,6 +410,7 @@ class ELIFPopulation(NeuralPopulation):
         delta_t: int = 10,
         threshold_rh: int = -55,
         threshold_r: int = -55,
+        dt: int = 1,
         **kwargs
     ) -> None:
         super().__init__(
@@ -428,6 +431,8 @@ class ELIFPopulation(NeuralPopulation):
         self.tau = R * C
         self.s = torch.Tensor()
         self.delta_t = delta_t
+        self.dt = torch.tensor(dt)
+
 
     def forward(self, traces: torch.Tensor) -> None:
         self.compute_potential(traces)
@@ -483,6 +488,7 @@ class AELIFPopulation(NeuralPopulation):
         b: float = 1.,
         threshold_rh: int = -55,
         threshold_r: int = -55,
+        dt:int = 1,
         **kwargs
     ) -> None:
         super().__init__(
@@ -508,6 +514,8 @@ class AELIFPopulation(NeuralPopulation):
         self.W = 0
         self.a = a
         self.b = b
+        self.dt = torch.tensor(dt)
+
 
     def forward(self, traces: torch.Tensor) -> None:
         self.compute_potential(traces)

@@ -1,7 +1,7 @@
-from network.neural_populations import ELIFPopulation
-from plotting.plotting import plotting
-from utils import step_function, two_way_step_function, random_step_function, random2_step_function
-from network.monitors import Monitor
+from cnsproject.network.neural_populations import ELIFPopulation
+from cnsproject.plotting.plotting import plotting
+from cnsproject.utils import step_function, two_way_step_function, random_step_function, random2_step_function
+from cnsproject.network.monitors import Monitor
 
 import torch
 import numpy as np

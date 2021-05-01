@@ -3,7 +3,7 @@ Module for connections between neural populations.
 """
 
 from abc import ABC, abstractmethod
-from typing import Union, Sequence
+from typing import Union, Sequence, Callable
 
 import torch
 
@@ -156,11 +156,34 @@ class AbstractConnection(ABC, torch.nn.Module):
         pass
 
 
-class DenseConnection(AbstractConnection):
-    """
-    Specify a fully-connected synapse between neural populations.
+def fullyConnect(pre, post, J, **kwargs):
+    connectivity_matrix = torch.ones(*pre.shape, *post.shape)
+    w = torch.ones(*connectivity_matrix.shape)*J/sum(pre.shape)
+    return connectivity_matrix, w
 
-    Implement the dense connection pattern following the abstract connection\
+
+def randomUniformConnect(pre, post, J, **kwargs):
+    connectivity_matrix = torch.rand(*pre.shape, *post.shape)
+    wmin = kwargs.get('wmin',0)
+    wmax = kwargs.get('wmax',1)
+    w = (torch.ones(*connectivity_matrix.shape)*(wmax-wmin)+wmin)*J/connectivity_matrix.sum(axis=0)
+    return connectivity_matrix, w
+
+
+def randomNormalConnect(pre, post, J, **kwargs):
+    connectivity_matrix = torch.rand(*pre.shape, *post.shape)
+    wmean = kwargs.get('wmean',1.)
+    wstd = kwargs.get('wstd',.1)
+    w = torch.normal(wmean, wstd, connectivity_matrix.shape)*J/connectivity_matrix.sum(axis=0)
+    return connectivity_matrix, w
+
+
+
+class Connection(AbstractConnection):
+    """
+    Specify a synapse between neural populations.
+
+    Implement the connection pattern following the abstract connection\
     template.
     """
 
@@ -174,6 +197,7 @@ class DenseConnection(AbstractConnection):
         tau_s: Union[float, torch.Tensor] = 15.,
         trace_scale: Union[float, torch.Tensor] = 1.,
         dt: int = 1,
+        connectivity: Callable = fullyConnect,
         **kwargs
     ) -> None:
         super().__init__(
@@ -184,9 +208,8 @@ class DenseConnection(AbstractConnection):
             **kwargs
         )
 
-        self.connectivity_matrix = torch.ge(torch.rand(*self.pre.shape, *self.post.shape), 0)
         self.J = J
-        self.w = torch.ones(*self.connectivity_matrix.shape)*self.J/sum(self.pre.shape)
+        self.connectivity_matrix, self.w = connectivity(self.pre, self.post, self.J, **kwargs)
         self.traces = torch.zeros(*self.connectivity_matrix.shape)
         self.tau_s = torch.tensor(tau_s)
         self.trace_scale = torch.tensor(trace_scale)
