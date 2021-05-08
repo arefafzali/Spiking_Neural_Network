@@ -39,7 +39,7 @@ def incremental_step_noise_function(time: int, I_value: int, scale: int, neuron_
             I[j, :] = x + I[j-1,:]
         I[gap*(i+1)*scale:, :] += I_value
     for i in range(time-1):
-        I[i, :] += np.random.normal(0, .25, size=(neuron_size))+np.random.normal(0, 1)
+        I[i, :] += np.random.normal(0, 1, size=(neuron_size))+np.random.normal(0, 1)
     I = torch.from_numpy(I)
     return I
 
@@ -49,9 +49,9 @@ def step_noise_function(time: int, I_value: int, scale: int, neuron_size: int = 
 
 
 def noise_function(time: int, neuron_size: int = 1):
-    I = np.zeros([time, neuron_size])+50
+    I = np.zeros([time, neuron_size])+200
     for i in range(time-1):
-        I[i, :] = abs(I[i-1, :]+np.random.normal(0, .25, size=(neuron_size))+np.random.normal(0, 2))
+        I[i, :] = abs(I[i-1, :]+np.random.normal(0, 1, size=(neuron_size))+np.random.normal(0, 2))
     I = torch.from_numpy(I)
     return I
 
