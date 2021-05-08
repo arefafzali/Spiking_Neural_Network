@@ -8,7 +8,7 @@ import torch
 import numpy as np
 
 
-time = 1000
+time = 200
 scale = 100
 dt = 1
 neuron_size = 100
@@ -16,9 +16,12 @@ shape_ep1 = (int(neuron_size),)
 shape_ep2 = (int(neuron_size),)
 shape_ip1 = (int(neuron_size),)
 
-I_ep1 = incremental_step_noise_function(time = time, I_value = 20, scale = scale, neuron_size = shape_ep1[0], gap = 5)
-I_ep2 = incremental_step_noise_function(time = time, I_value = 20, scale = scale, neuron_size = shape_ep2[0], gap = 3)
-I_ip1 = step_noise_function(time = time, I_value = 20, scale = scale, neuron_size = shape_ip1[0])
+# I_ep1 = incremental_step_noise_function(time = time, I_value = 100, scale = scale, neuron_size = shape_ep1[0], gap = 5)
+# I_ep2 = incremental_step_noise_function(time = time, I_value = 100, scale = scale, neuron_size = shape_ep2[0], gap = 3)
+# I_ip1 = step_noise_function(time = time, I_value = 100, scale = scale, neuron_size = shape_ip1[0])
+I_ep1 = noise_function(time,shape_ep1[0])
+I_ep2 = noise_function(time,shape_ep2[0])
+I_ip1 = noise_function(time,shape_ip1[0]) * 0
 
 ep1 = LIFPopulation(
         shape = shape_ep1, spike_trace = True, additive_spike_trace = True, tau_s = 10, trace_scale = 1.,

@@ -223,3 +223,15 @@ class plotting():
         self.ax9.plot(it3.mean(axis=1), color = c3)
         return
 
+
+    def plot_encoding_decoding(self, spikes, encoded, decoded):
+        self.reset()
+        self.ax1 = self.figure.add_subplot(221)
+        self.ax1.imshow(spikes)
+        self.ax2 = self.figure.add_subplot(2,2,(2,4))
+        sf = np.flipud(encoded.T)
+        args = np.argwhere(sf)
+        self.ax2.scatter(args.T[1,:], args.T[0,:], s=0.1)
+        self.ax3 = self.figure.add_subplot(223)
+        self.ax3.imshow(decoded)
+        
