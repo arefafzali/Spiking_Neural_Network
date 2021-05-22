@@ -6,7 +6,7 @@ from cnsproject.plotting.plotting import plotting
 from cnsproject.network.neural_populations import LIFPopulation, InputPopulation
 from cnsproject.network.monitors import Monitor
 from cnsproject.encoding.encoders import PoissonEncoder
-from cnsproject.network.connections import Connection, fullyConnect, fullyNormalConnect
+from cnsproject.network.connections import Connection, fullyNormalConnect
 from cnsproject.learning.learning_rules import STDP
 
 time = 200
@@ -16,11 +16,11 @@ shape1 = (20,20)
 shape2 = (2,)
 
 im1 = Image.open("./example/learning_rules/img1.png").convert('L')
+im2 = Image.open("./example/learning_rules/img2.jpg").convert('L')
 im1 = im1.resize(shape1, Image.ANTIALIAS)
-im2 = Image.open("./example/learning_rules/img.jpg").convert('L')
 im2 = im2.resize(shape1, Image.ANTIALIAS)
-s1 = torch.from_numpy(np.asarray(im1))
-s2 = torch.from_numpy(np.asarray(im2))
+s1 = torch.from_numpy(np.asarray(im1).copy())
+s2 = torch.from_numpy(np.asarray(im2).copy())
 
 encoder = PoissonEncoder(time = int(time/4), r=10)
 I1 = encoder(s1)
@@ -30,13 +30,13 @@ I = torch.cat((I1,I2,I1,I2), 0)
 
 
 n1 = InputPopulation(
-        shape = shape1, spike_trace = True, additive_spike_trace = True, tau_s = 10, trace_scale = 1.,
+        shape = shape1, spike_trace = True, additive_spike_trace = True, tau_s = 4, trace_scale = 1.,
         is_inhibitory = False, learning = False, R = 1, C = 20, threshold = -40
     )
 n1.dt = dt
 
 n2 = LIFPopulation(
-        shape = shape2, spike_trace = True, additive_spike_trace = True, tau_s = 1, trace_scale = 1.,
+        shape = shape2, spike_trace = True, additive_spike_trace = True, tau_s = 4, trace_scale = 1.,
         is_inhibitory = False, learning = False, R = 1, C = 20, threshold = -40
     )
 n2.dt = dt
@@ -52,7 +52,7 @@ monitor1 = Monitor(n1, state_variables=["s"])
 monitor1.set_time_steps(time, dt)
 monitor1.reset_state_variables()
 
-monitor2 = Monitor(n2, state_variables=["s", "u", "traces"])
+monitor2 = Monitor(n2, state_variables=["s"])
 monitor2.set_time_steps(time, dt)
 monitor2.reset_state_variables()
 
@@ -65,9 +65,9 @@ for i in range(len(I)):
     n1.forward(I[i])
     n2.forward(I_ex)
     I_ex = con1.compute()
+    con1.update(learning=True,)
     monitor1.record()
     monitor2.record()
-    con1.update(learning=True,)
     monitor3.record()
 
 
@@ -79,6 +79,6 @@ I = I.flatten(start_dim=1)
 plot = plotting()
 
 plot.plot_learning_init(time/scale)
-plot.plot_learning_update(s1.T, s2.T, w, mode="2")
+plot.plot_learning_update(s1.T, s2.T, w)
 plot.show()
 

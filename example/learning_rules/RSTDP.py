@@ -6,8 +6,27 @@ from cnsproject.plotting.plotting import plotting
 from cnsproject.network.neural_populations import LIFPopulation, InputPopulation
 from cnsproject.network.monitors import Monitor
 from cnsproject.encoding.encoders import PoissonEncoder
-from cnsproject.network.connections import Connection, fullyConnect,fullyNormalConnect
-from cnsproject.learning.learning_rules import FlatSTDP
+from cnsproject.network.connections import Connection, fullyNormalConnect
+from cnsproject.learning.learning_rules import RSTDP
+
+# 0 -> im1 & 1 -> im2
+def DA(time, n0, n1):
+    r = 0
+    time = time/100
+    if n0 < n1:
+        if ((time < 5) or ((time<15) and (time>10))):
+            r = -1
+        else:
+            r = 1
+    elif n0 > n1:
+        if ((time < 5) or ((time<15) and (time>10))):
+            r = 1
+        else:
+            r = -1
+    else:
+        r = 0
+    return r
+
 
 time = 200
 scale = 100
@@ -16,8 +35,8 @@ shape1 = (20,20)
 shape2 = (2,)
 
 im1 = Image.open("./example/learning_rules/img1.png").convert('L')
-im2 = Image.open("./example/learning_rules/img.jpg").convert('L')
 im1 = im1.resize(shape1, Image.ANTIALIAS)
+im2 = Image.open("./example/learning_rules/img2.jpg").convert('L')
 im2 = im2.resize(shape1, Image.ANTIALIAS)
 s1 = torch.from_numpy(np.asarray(im1).copy())
 s2 = torch.from_numpy(np.asarray(im2).copy())
@@ -44,7 +63,7 @@ n2.dt = dt
 con1 = Connection(
         pre = n1, post = n2, lr = None, weight_decay = 0.005,
         J = 2, tau_s = 10, trace_scale = 15., dt = dt, connectivity = fullyNormalConnect, wmean=5., wstd=.5,
-        learning_rule=FlatSTDP, beta=1., gamma=.2, trace_periode=5
+        learning_rule=RSTDP, beta=1., gamma=.2, DA=DA
     )
 
 
@@ -65,9 +84,9 @@ for i in range(len(I)):
     n1.forward(I[i])
     n2.forward(I_ex)
     I_ex = con1.compute()
+    con1.update(learning=True,time=i)
     monitor1.record()
     monitor2.record()
-    con1.update(learning=True,)
     monitor3.record()
 
 
@@ -81,3 +100,4 @@ plot = plotting()
 plot.plot_learning_init(time/scale)
 plot.plot_learning_update(s1.T, s2.T, w)
 plot.show()
+

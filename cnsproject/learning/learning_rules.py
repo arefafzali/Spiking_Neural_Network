@@ -3,12 +3,13 @@ Module for learning rules.
 """
 
 from abc import ABC
-from typing import Union, Optional, Sequence
+from typing import Callable, Union, Optional, Sequence
 
 import numpy as np
 import torch
 
 from cnsproject.network.connections import AbstractConnection
+from cnsproject.learning.rewards import Reward
 
 
 class LearningRule(ABC):
@@ -52,7 +53,6 @@ class LearningRule(ABC):
 
         self.lr = torch.tensor(lr, dtype=torch.float)
 
-        # self.weight_decay = 1 - weight_decay if weight_decay else 1.
         self.connection = connection
         self.weight_decay = weight_decay
 
@@ -228,6 +228,7 @@ class RSTDP(LearningRule):
         connection: AbstractConnection,
         lr: Optional[Union[float, Sequence[float]]] = None,
         weight_decay: float = 0.,
+        DA: Callable = None,
         **kwargs
     ) -> None:
         super().__init__(
@@ -237,11 +238,14 @@ class RSTDP(LearningRule):
             **kwargs
         )
         """
-        TODO.
-
         Consider the additional required parameters and fill the body\
         accordingly.
         """
+        self.tau_c = kwargs.get("tau_c", 1.)
+        self.reward = Reward()
+        self.DA = DA
+        self.c = torch.zeros(*self.connection.connectivity_matrix.shape)
+        # self.c = torch.zeros(*self.connection.post.shape)
 
     def update(self, **kwargs) -> None:
         """
@@ -251,7 +255,28 @@ class RSTDP(LearningRule):
         parent method. Make sure to consider the reward value as a given keyword
         argument.
         """
-        pass
+        self.lr = kwargs.get("lr", .1)
+        time = kwargs.get("time", None)
+        pre_trace = self.connection.pre.traces.reshape((*self.connection.pre.shape,*[1]*len(self.connection.post.shape)))
+        post_trace = self.connection.post.traces.reshape((*[1]*len(self.connection.pre.shape),*self.connection.post.shape))
+        x = (
+            self.lr * pre_trace * self.connection.post.s.reshape(*post_trace.shape)
+             - self.lr * post_trace * self.connection.pre.s.reshape(*pre_trace.shape)
+        ) - self.weight_decay * self.connection.w
+
+        self.c += self.connection.dt * (-self.c/self.tau_c + x * torch.bitwise_or(
+            self.connection.pre.s.reshape(*post_trace.shape), self.connection.post.s.reshape(*post_trace.shape)
+            ))
+        r = self.DA(time, self.connection.pre.s.sum(), self.connection.post.s.sum())
+        # self.c += self.connection.dt * (-self.c/self.tau_c + x * torch.bitwise_or(
+        #     self.connection.post.s[0], self.connection.post.s[1]
+        #     ))
+        # r = self.DA(time, self.connection.post.s[0], self.connection.post.s[1])
+
+        dopamine = self.reward.compute(reward=r)
+        self.connection.w += self.connection.dt * (self.c * dopamine)
+
+        return
 
 
 class FlatRSTDP(LearningRule):

@@ -238,7 +238,7 @@ class Connection(AbstractConnection):
         You might need to call the parent method.
         """
         self.compute_learning_rate()
-        super().update(lr=self.lr)
+        super().update(lr=self.lr, time=kwargs.get("time", None))
         self.w[self.w>self.wmax] = self.wmax
         self.w[self.w<self.wmin] = self.wmin
         return
