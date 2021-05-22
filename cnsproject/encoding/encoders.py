@@ -157,7 +157,6 @@ class PositionEncoder(AbstractEncoder):
         self.neuron_range_std = neuron_range_std
         self.min_range = min_range
         self.max_range = max_range
-        self.norm_dist = Normal(torch.tensor(self.neuron_range_mean), torch.tensor(self.neuron_range_std))
 
 
     def __call__(self, data: torch.Tensor) -> None:
@@ -166,11 +165,12 @@ class PositionEncoder(AbstractEncoder):
 
         Implement the computation for coding the data. Return resulting tensor.
         """
+        norm_dist = Normal(self.neuron_range_mean, self.neuron_range_std)
         scaled_data = np.interp(data, (self.min_range, self.max_range), (0, self.neuron_numbers))
         scaled_data = torch.tensor(scaled_data)
         scaled_data = scaled_data.reshape(*scaled_data.shape, 1)
 
-        mapped_data = torch.exp(self.norm_dist.log_prob(scaled_data)) / torch.exp(self.norm_dist.log_prob(scaled_data)).mean()
+        mapped_data = torch.exp(norm_dist.log_prob(scaled_data)) / torch.exp(norm_dist.log_prob(self.neuron_range_mean))
 
         I = torch.zeros((self.time,*mapped_data.shape))
         scaled_data = np.interp(mapped_data, (self.min_range, self.neuron_numbers), (0, self.time-1))
@@ -182,6 +182,32 @@ class PositionEncoder(AbstractEncoder):
 
         return I
 
+    def decode(self, data: torch.Tensor) -> torch.Tensor:
+        d = data.reshape(self.time,-1)
+        # d = data
+        times,neurons = torch.where(d)
+        spike_times = torch.cat([neurons.reshape(*neurons.shape,1),times.reshape(*times.shape,1)], dim=1)
+        spike_times = spike_times[spike_times[:,0].argsort()]
+        d = torch.zeros(d.shape[1]) - 1
+        d[spike_times[:,0]] = spike_times[:,1].type(torch.float)
+        d = d.reshape(-1, self.neuron_numbers)
+        d[d==-1] = float('NaN')
+        d = self.time - d
+        norm_dist = Normal(self.neuron_range_mean, self.neuron_range_std)
+        d /= self.time
+        d *= torch.exp(norm_dist.log_prob(self.neuron_range_mean))
+        d_left = norm_dist.icdf(torch.tensor(d))
+        d_right = norm_dist.icdf(torch.tensor(1-d))
+        d = torch.cat([d_left.reshape(*d_left.shape,1),d_right.reshape(*d_right.shape,1)], dim=-1)
+        mean = d.nansum(axis=(-2,-1))/(~d.isnan()).sum(axis=(-2,-1))
+        diff = torch.abs(d-mean.reshape(*mean.shape,1,1))
+        diff = diff.reshape(-1, diff.shape[-1])
+        d = d.reshape(-1, d.shape[-1])
+        d = d[torch.arange(d.shape[0]), diff.argmin(axis=-1)]
+        d = d.reshape(-1, self.neuron_numbers)
+        d = d.nansum(axis=-1)/(~d.isnan()).sum(axis=-1)
+        d = d.reshape(*data[0].shape[:-1])
+        return d
 
 
 

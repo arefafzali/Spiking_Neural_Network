@@ -12,7 +12,7 @@ import numpy as np
 def step_function(time: int, I_value: int, scale: int, neuron_size: int = 1):
     I = torch.zeros(time, neuron_size)
     for i in range(neuron_size):
-        I[5*scale:, i] = I_value * (i+1)
+        I[2*scale:, i] = I_value * (i+1)
     return I
 
 
@@ -48,8 +48,8 @@ def step_noise_function(time: int, I_value: int, scale: int, neuron_size: int = 
     return I
 
 
-def noise_function(time: int, neuron_size: int = 1):
-    I = np.zeros([time, neuron_size])+200
+def noise_function(time: int, neuron_size: int = 1, start: float = 200):
+    I = np.zeros([time, neuron_size])+start
     for i in range(time-1):
         I[i, :] = abs(I[i-1, :]+np.random.normal(0, 1, size=(neuron_size))+np.random.normal(0, 2))
     I = torch.from_numpy(I)
