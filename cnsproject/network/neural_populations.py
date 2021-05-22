@@ -133,9 +133,10 @@ class NeuralPopulation(torch.nn.Module):
         None
 
         """
+        self.compute_decay()
         if self.spike_trace:
             self.traces *= self.trace_decay
-
+            
             if self.additive_spike_trace:
                 self.traces += self.trace_scale * self.s.float()
             else:
@@ -331,7 +332,7 @@ class LIFPopulation(NeuralPopulation):
         )
 
         self.u_rest = -70
-        self.u = torch.ones(self.n) * self.u_rest
+        self.u = torch.ones(shape) * self.u_rest
         self.threshold = threshold
         self.R = R
         self.tau = R * C
@@ -424,7 +425,7 @@ class ELIFPopulation(NeuralPopulation):
         )
 
         self.u_rest = -70
-        self.u = torch.ones(self.n) * self.u_rest
+        self.u = torch.ones(shape) * self.u_rest
         self.threshold_r = threshold_r
         self.threshold_rh = threshold_rh
         self.R = R
@@ -502,7 +503,7 @@ class AELIFPopulation(NeuralPopulation):
         )
 
         self.u_rest = -70
-        self.u = torch.ones(self.n) * self.u_rest
+        self.u = torch.ones(shape) * self.u_rest
         self.threshold_r = threshold_r
         self.threshold_rh = threshold_rh
         self.R = R

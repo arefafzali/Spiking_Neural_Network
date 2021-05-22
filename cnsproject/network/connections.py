@@ -97,6 +97,8 @@ class AbstractConnection(ABC, torch.nn.Module):
         )
         self.wmin = kwargs.get('wmin', 0.)
         self.wmax = kwargs.get('wmax', 1.)
+        self.gamma = kwargs.get('gamma', .1)
+        self.beta = kwargs.get('beta', 1.)
         self.norm = kwargs.get('norm', None)
 
     @abstractmethod
@@ -162,6 +164,14 @@ def fullyConnect(pre, post, J, **kwargs):
     return connectivity_matrix, w
 
 
+def fullyNormalConnect(pre, post, J, **kwargs):
+    connectivity_matrix = torch.ones(*pre.shape, *post.shape)
+    wmean = kwargs.get('wmean',1.)
+    wstd = kwargs.get('wstd',.1)
+    w = torch.normal(wmean, wstd, connectivity_matrix.shape)*J/connectivity_matrix.sum(axis=0)
+    return connectivity_matrix, w
+
+
 def randomUniformConnect(pre, post, J, **kwargs):
     connectivity_matrix = torch.rand(*pre.shape, *post.shape)
     wmin = kwargs.get('wmin',0)
@@ -216,7 +226,6 @@ class Connection(AbstractConnection):
         self.dt = torch.tensor(dt)
 
     def compute(self) -> torch.tensor:
-        self.pre.compute_decay()
         self.trace_decay = torch.exp(-self.dt/self.tau_s)
         self.traces *= self.trace_decay
         self.traces += self.trace_scale * self.pre.s.float().reshape(*self.pre.shape, *[1 for i in self.post.shape])
@@ -225,12 +234,18 @@ class Connection(AbstractConnection):
 
     def update(self, **kwargs) -> None:
         """
-        TODO.
-
         Update the connection weights based on the learning rule computations.\
         You might need to call the parent method.
         """
-        pass
+        self.compute_learning_rate()
+        super().update(lr=self.lr, time=kwargs.get("time", None))
+        self.w[self.w>self.wmax] = self.wmax
+        self.w[self.w<self.wmin] = self.wmin
+        return
+
+    def compute_learning_rate(self) -> None:
+        self.lr = self.gamma * (((self.wmax - self.w)*(self.w-self.wmin)) ** self.beta)
+        return
 
     def reset_state_variables(self) -> None:
         """
