@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from cnsproject.network.connections import AbstractConnection
-from cnsproject.learning.rewards import Reward
+# from cnsproject.learning.rewards import Reward
 
 
 class LearningRule(ABC):
@@ -242,9 +242,9 @@ class RSTDP(LearningRule):
         accordingly.
         """
         self.tau_c = kwargs.get("tau_c", 1.)
-        self.reward = Reward()
-        self.DA = DA
-        self.c = torch.zeros(*self.connection.connectivity_matrix.shape)
+        # self.reward = Reward()
+        # self.DA = DA
+        self.c = torch.zeros((*self.connection.pre.shape, *self.connection.post.shape))
         # self.c = torch.zeros(*self.connection.post.shape)
 
     def update(self, **kwargs) -> None:
@@ -256,24 +256,27 @@ class RSTDP(LearningRule):
         argument.
         """
         self.lr = kwargs.get("lr", .1)
-        time = kwargs.get("time", None)
+        dopamine = kwargs.get("dopamine", None)
         pre_trace = self.connection.pre.traces.reshape((*self.connection.pre.shape,*[1]*len(self.connection.post.shape)))
         post_trace = self.connection.post.traces.reshape((*[1]*len(self.connection.pre.shape),*self.connection.post.shape))
         x = (
-            self.lr * pre_trace * self.connection.post.s.reshape(*post_trace.shape)
-             - self.lr * post_trace * self.connection.pre.s.reshape(*pre_trace.shape)
-        ) - self.weight_decay * self.connection.w
+                self.lr * pre_trace * self.connection.post.s.reshape(*post_trace.shape)
+                - self.lr * post_trace * self.connection.pre.s.reshape(*pre_trace.shape)
+            ) - self.weight_decay * self.connection.w
 
+        # print(self.connection.pre.s.type(torch.int))
         self.c += self.connection.dt * (-self.c/self.tau_c + x * torch.bitwise_or(
-            self.connection.pre.s.reshape(*post_trace.shape), self.connection.post.s.reshape(*post_trace.shape)
+                self.connection.pre.s.reshape(*pre_trace.shape).type(torch.int), 
+                self.connection.post.s.reshape(*post_trace.shape).type(torch.int)
             ))
-        r = self.DA(time, self.connection.pre.s.sum(), self.connection.post.s.sum())
-        # self.c += self.connection.dt * (-self.c/self.tau_c + x * torch.bitwise_or(
-        #     self.connection.post.s[0], self.connection.post.s[1]
-        #     ))
-        # r = self.DA(time, self.connection.post.s[0], self.connection.post.s[1])
+        # print(self.c)
+        # r = self.DA(time, self.connection.pre.s.sum(), self.connection.post.s.sum())
+        # # self.c += self.connection.dt * (-self.c/self.tau_c + x * torch.bitwise_or(
+        # #     self.connection.post.s[0], self.connection.post.s[1]
+        # #     ))
+        # # r = self.DA(time, self.connection.post.s[0], self.connection.post.s[1])
 
-        dopamine = self.reward.compute(reward=r)
+        # dopamine = self.reward.compute(reward=r)
         self.connection.w += self.connection.dt * (self.c * dopamine)
 
         return
