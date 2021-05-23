@@ -158,6 +158,47 @@ class plotting():
         self.ax3.plot(w, color = c, alpha=0.1)
         return
 
+    def plot_Rlearning_init(self, time) -> None:
+        self.reset()
+        self.ax1 = self.figure.add_subplot(311)
+        self.ax1.set_ylabel('number of neuron')
+        self.ax1.set_xlabel('time')
+        self.ax1.set_title("Encoder Raster Plot")
+        self.ax1.grid(True)
+        self.ax1.set_xticks(np.arange(time+1, dtype=int)*100)
+        self.ax1.set_xticklabels(np.arange(time+1, dtype=int))
+
+        self.ax2 = self.figure.add_subplot(312)
+        self.ax2.set_xlabel('time')
+        self.ax2.set_ylabel('index of neuron')
+        self.ax2.set_title("Output Populations Raster Plot")
+        self.ax2.grid(True)
+        self.ax2.set_xlim([-50,time+50])
+        self.ax2.set_xticks(np.arange(time+1, dtype=int)*100)
+        self.ax2.set_xticklabels(np.arange(time+1, dtype=int))
+
+        self.ax3 = self.figure.add_subplot(313)
+        self.ax3.set_ylabel('activity')
+        self.ax3.set_xlabel('time')
+        self.ax3.set_title("Activity")
+        self.ax3.grid(True)
+        self.ax3.set_xticks(np.arange(time+1, dtype=int)*100)
+        self.ax3.set_xticklabels(np.arange(time+1, dtype=int))
+        self.figure.tight_layout(pad=0.5)
+        return
+
+    def plot_Rlearning_update(self, encoded, spikes, a, start_idx=0, mode="") -> None:
+        c = next(self.colors)["color"]
+        sf = np.flipud(encoded)
+        args = np.argwhere(sf)
+        self.ax1.scatter(args.T[1,:], args.T[0,:], c = c, s=0.5)
+        sf = np.flipud(spikes)
+        args = np.argwhere(sf)
+        self.ax2.scatter(args.T[1,:], start_idx+args.T[0,:], c = c, label="population "+mode, s=10)
+        self.ax3.plot(a, color = c)
+        return
+
+
     def plot_three_population_activity_init(self, time) -> None:
         self.reset()
         self.ax1 = self.figure.add_subplot(331)
