@@ -14,6 +14,7 @@ also a bonus. The visualizations you will definitely need are as follows:
 5. Weight change through time.
 """
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import numpy as np
 import torch
 
@@ -314,4 +315,23 @@ class plotting():
         self.ax2.scatter(args.T[1,:], args.T[0,:], s=0.1)
         self.ax3 = self.figure.add_subplot(223)
         self.ax3.imshow(decoded)
-        
+
+    def plot_v1(self, image, kernel, output):
+        self.reset()
+        self.ax1 = self.figure.add_subplot(131)
+        self.ax1.set_title("Grayscale Input Image")
+        self.ax1.imshow(image)
+        self.ax2 = self.figure.add_subplot(132)
+        self.ax2.set_title("Kernel")
+        self.ax2.imshow(kernel)
+        self.ax3 = self.figure.add_subplot(133)
+        self.ax3.set_title("Output Image")
+        self.ax3.imshow(output)
+
+    def plot_kernel_surface(self, matrix):
+        (x, y) = np.meshgrid(np.arange(matrix.shape[0]), np.arange(matrix.shape[1]))
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(x, y, matrix, cmap=cm.Spectral_r)
+        fig.colorbar(surf, shrink=.5, aspect=5)
+        plt.show()
