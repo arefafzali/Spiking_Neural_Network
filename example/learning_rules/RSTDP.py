@@ -70,13 +70,13 @@ n3.dt = dt
 
 
 con1 = Connection(
-        pre = n1, post = n2, lr = None, weight_decay = 0.05,
+        pre = n1, post = n2, lr = None, weight_decay = 0.005,
         J = 1, tau_s = 5, trace_scale = 10., dt = dt, connectivity = fullyNormalConnect, wmean=5., wstd=.5,
         learning_rule=RSTDP, beta=1., gamma=.2
     )
 
 con2 = Connection(
-        pre = n1, post = n3, lr = None, weight_decay = 0.05,
+        pre = n1, post = n3, lr = None, weight_decay = 0.005,
         J = 1, tau_s = 5, trace_scale = 10., dt = dt, connectivity = fullyNormalConnect, wmean=5., wstd=.5,
         learning_rule=RSTDP, beta=1., gamma=.2
     )

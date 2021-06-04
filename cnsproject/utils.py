@@ -55,3 +55,41 @@ def noise_function(time: int, neuron_size: int = 1, start: float = 200):
     I = torch.from_numpy(I)
     return I
 
+
+def get_gaussian_kernel(k=3, sigma=1):
+    steps = np.linspace(-1, 1, k)
+    x, y = np.meshgrid(steps, steps)
+    gaussian = np.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2))
+    gaussian = gaussian / (2 * np.pi *sigma **2) ** 0.5
+    # gaussian = gaussian / np.sum(gaussian)
+    return gaussian
+
+
+def DoG_kernel(k=3, sigma1=0.3, sigma2=1):
+    g1 = get_gaussian_kernel(k, sigma1)
+    g2 = get_gaussian_kernel(k, sigma2)
+    DoG = g1 - g2
+    DoG -= DoG.mean()
+    return DoG
+
+
+def gabor_kernel(k=5, sigma=.4, teta=0, gamma=0.3, lambdal=0.8):
+    step = np.linspace(-1, 1, k)
+    x, y = np.meshgrid(step, step)
+    X = x*np.cos(teta) + y*np.sin(teta)
+    Y = -x*np.sin(teta) + y*np.cos(teta)
+    gabor = np.exp(-(X**2 + (gamma**2) * (Y**2)) / (2 * sigma ** 2))
+    gabor = gabor * np.cos(2*np.pi*X/lambdal)
+    gabor -= gabor.mean()
+    return gabor
+
+def convolution(image, kernel, bias):
+    m, n = kernel.shape
+    y, x = image.shape
+    y -= m + 1
+    x -= n + 1
+    new_image = torch.zeros((y,x))
+    for i in range(y):
+        for j in range(x):
+            new_image[i][j] = torch.sum(image[i:i+m, j:j+n]*kernel) + bias
+    return new_image
