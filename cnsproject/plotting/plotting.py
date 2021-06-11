@@ -316,6 +316,17 @@ class plotting():
         self.ax3 = self.figure.add_subplot(223)
         self.ax3.imshow(decoded)
 
+
+    def plot_visual_activity(self, spikes, encoded, decoded):
+        self.reset()
+        self.ax1 = self.figure.add_subplot(221)
+        self.ax1.imshow(encoded)
+        self.ax2 = self.figure.add_subplot(2,2,(2,4))
+        self.ax2.plot(sum(spikes))
+        self.ax3 = self.figure.add_subplot(223)
+        self.ax3.imshow(decoded)
+
+
     def plot_v1(self, image, kernel, output):
         self.reset()
         self.ax1 = self.figure.add_subplot(131)

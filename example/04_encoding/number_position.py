@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from cnsproject.encoding.encoders import PositionEncoder
 from cnsproject.plotting.plotting import plotting
 
-im = Image.open("./example/encoding/img.jpg").convert('L')
+im = Image.open("./example/images/img.jpg").convert('L')
 im = im.resize((200,200),Image.ANTIALIAS)
 data = torch.from_numpy(np.asarray(im))
 
