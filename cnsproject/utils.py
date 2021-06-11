@@ -7,6 +7,7 @@ a separate module/package for them.
 """
 import torch
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
 
 
 def step_function(time: int, I_value: int, scale: int, neuron_size: int = 1):
@@ -83,13 +84,34 @@ def gabor_kernel(k=5, sigma=.4, teta=0, gamma=0.3, lambdal=0.8):
     gabor -= gabor.mean()
     return gabor
 
-def convolution(image, kernel, bias):
+def convolution(image, kernel, bias=0, padding=0, stride=1):
+    padding = (padding, padding)
+    stride = (stride, stride)
+    image = torch.cat([torch.zeros((padding[0],image.shape[1])),image,torch.zeros((padding[0],image.shape[1]))], axis=0)
+    image = torch.cat([torch.zeros((image.shape[0],padding[1])),image,torch.zeros((image.shape[0],padding[1]))], axis=1)
     m, n = kernel.shape
     y, x = image.shape
     y -= m + 1
     x -= n + 1
     new_image = torch.zeros((y,x))
-    for i in range(y):
-        for j in range(x):
+    for i in range(0, y, stride[0]):
+        for j in range(0, x, stride[1]):
             new_image[i][j] = torch.sum(image[i:i+m, j:j+n]*kernel) + bias
+    return new_image
+
+
+def pool(image, k, stride, padding, pool_mode='max'):
+    image = np.pad(image, padding, mode='constant')
+    output_shape = ((image.shape[0] - k)//stride + 1, (image.shape[1] - k)//stride + 1)
+    kernel_size = (k, k)
+    new_image = as_strided(
+            image, shape = output_shape + kernel_size, 
+            strides = (stride*image.strides[0],
+            stride*image.strides[1]) + image.strides
+        )
+    new_image = new_image.reshape(-1, *kernel_size)
+    if pool_mode == 'max':
+        new_image = new_image.max(axis=(1,2)).reshape(output_shape)
+    elif pool_mode == 'avg':
+        new_image = new_image.mean(axis=(1,2)).reshape(output_shape)
     return new_image

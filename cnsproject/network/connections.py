@@ -8,6 +8,7 @@ from typing import Union, Sequence, Callable
 import torch
 
 from cnsproject.network.neural_populations import NeuralPopulation
+from cnsproject.utils import convolution, pool
 
 
 
@@ -256,62 +257,6 @@ class Connection(AbstractConnection):
         pass
 
 
-class RandomConnection(AbstractConnection):
-    """
-    Specify a random synaptic connection between neural populations.
-
-    Implement the random connection pattern following the abstract connection\
-    template.
-    """
-
-    def __init__(
-        self,
-        pre: NeuralPopulation,
-        post: NeuralPopulation,
-        lr: Union[float, Sequence[float]] = None,
-        weight_decay: float = 0.0,
-        **kwargs
-    ) -> None:
-        super().__init__(
-            pre=pre,
-            post=post,
-            lr=lr,
-            weight_decay=weight_decay,
-            **kwargs
-        )
-        """
-        TODO.
-
-        1. Add more parameters if needed.
-        2. Fill the body accordingly.
-        """
-
-    def compute(self, s: torch.Tensor) -> None:
-        """
-        TODO.
-
-        Implement the computation of post-synaptic population activity given the
-        activity of the pre-synaptic population.
-        """
-        pass
-
-    def update(self, **kwargs) -> None:
-        """
-        TODO.
-
-        Update the connection weights based on the learning rule computations.\
-        You might need to call the parent method.
-        """
-        pass
-
-    def reset_state_variables(self) -> None:
-        """
-        TODO.
-
-        Reset all the state variables of the connection.
-        """
-        pass
-
 
 class ConvolutionalConnection(AbstractConnection):
     """
@@ -327,6 +272,11 @@ class ConvolutionalConnection(AbstractConnection):
         post: NeuralPopulation,
         lr: Union[float, Sequence[float]] = None,
         weight_decay: float = 0.0,
+        kernel: torch.tensor = None,
+        J: float = 1,
+        bias: int = 0,
+        padding: int = 0,
+        stride: int = 1,
         **kwargs
     ) -> None:
         super().__init__(
@@ -336,21 +286,23 @@ class ConvolutionalConnection(AbstractConnection):
             weight_decay=weight_decay,
             **kwargs
         )
+        self.kernel = kernel
+        self.J = J
+        self.bias = bias
+        self.stride = stride
+        self.padding = padding
         """
-        TODO.
-
         1. Add more parameters if needed.
         2. Fill the body accordingly.
         """
 
-    def compute(self, s: torch.Tensor) -> None:
+    def compute(self) -> None:
         """
-        TODO.
-
         Implement the computation of post-synaptic population activity given the
         activity of the pre-synaptic population.
         """
-        pass
+        I = convolution(self.pre.s, self.kernel, self.bias, self.padding, self.stride) * self.J
+        return I
 
     def update(self, **kwargs) -> None:
         """
@@ -387,6 +339,10 @@ class PoolingConnection(AbstractConnection):
         post: NeuralPopulation,
         lr: Union[float, Sequence[float]] = None,
         weight_decay: float = 0.0,
+        k: int = 1,
+        J: float = 1,
+        padding: int = 0,
+        stride: int = 1,
         **kwargs
     ) -> None:
         super().__init__(
@@ -396,21 +352,22 @@ class PoolingConnection(AbstractConnection):
             weight_decay=weight_decay,
             **kwargs
         )
+        self.J = J
+        self.k = k
+        self.stride = stride
+        self.padding = padding
         """
-        TODO.
-
         1. Add more parameters if needed.
         2. Fill the body accordingly.
         """
 
-    def compute(self, s: torch.Tensor) -> None:
+    def compute(self) -> None:
         """
-        TODO.
-
         Implement the computation of post-synaptic population activity given the
         activity of the pre-synaptic population.
         """
-        pass
+        I = pool(self.pre.s, self.k, self.stride, self.padding) * self.J
+        return I
 
     def update(self, **kwargs) -> None:
         """

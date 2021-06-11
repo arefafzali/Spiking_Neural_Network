@@ -10,7 +10,7 @@ import torch
 # kernel = DoG_kernel(k=5, sigma1=0.3, sigma2=1)
 kernel = gabor_kernel(k=5, sigma=.4, teta=0, gamma=.3, lambdal=.8)
 
-im = Image.open("./example/encoding/img.jpg").convert('L')
+im = Image.open("./example/images/img.jpg").convert('L')
 im = im.resize((200,200),Image.ANTIALIAS)
 data = torch.from_numpy(np.asarray(im).copy())
 
